@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur de contrat — Passedevant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --black: #0a0a0a; --white: #ffffff; --accent: #e8194b; --accent-light: #fff0f3;
+    --gray-100: #f7f7f7; --gray-200: #ebebeb; --gray-400: #aaaaaa; --gray-600: #555555;
+    --radius: 10px; --shadow: 0 2px 24px rgba(0,0,0,0.07);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--gray-100); color: var(--black); min-height: 100vh; }
+  .header { background: var(--black); padding: 22px 40px; display: flex; align-items: center; gap: 20px; position: sticky; top: 0; z-index: 100; }
+  .header-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.2); }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--white); letter-spacing: 0.01em; }
+  .header-badge { margin-left: auto; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); background: rgba(232,25,75,0.12); border: 1px solid rgba(232,25,75,0.25); padding: 4px 10px; border-radius: 20px; text-transform: uppercase; }
+  .main { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+  .intro { margin-bottom: 40px; }
+  .intro h1 { font-family: 'DM Serif Display', serif; font-size: 34px; font-weight: 400; color: var(--black); margin-bottom: 10px; line-height: 1.2; }
+  .intro p { font-size: 15px; color: var(--gray-600); line-height: 1.6; }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; border: 1px solid var(--gray-200); }
+  .card-header { padding: 18px 28px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 12px; }
+  .card-num { width: 28px; height: 28px; background: var(--black); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .card-title { font-size: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--black); }
+  .card-body { padding: 24px 28px; }
+  .grid { display: grid; gap: 18px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-600); }
+  .field input, .field select, .field textarea { font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--black); background: var(--gray-100); border: 1.5px solid var(--gray-200); border-radius: 7px; padding: 10px 14px; transition: border-color 0.15s, background 0.15s; outline: none; width: 100%; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--black); background: var(--white); }
+  .field input.error, .field select.error { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .field select { cursor: pointer; }
+  .tarif-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; align-items: end; }
+  .tarif-computed { background: var(--accent-light); border: 1.5px solid rgba(232,25,75,0.2); border-radius: 7px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--accent); text-align: center; }
+  .hint { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+  .btn-generate { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 18px 32px; background: var(--black); color: var(--white); border: none; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; transition: transform 0.15s, background 0.15s; margin-top: 28px; }
+  .btn-generate:hover { background: #222; transform: translateY(-1px); }
+  .btn-generate:active { transform: translateY(0); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .status { margin-top: 16px; padding: 14px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; align-items: center; gap: 10px; }
+  .status.info { background: #f0f4ff; color: #2a4ccc; display: flex; border: 1px solid #c5d2f6; }
+  .status.success { background: #f0fdf4; color: #166534; display: flex; border: 1px solid #bbf7d0; }
+  .status.error { background: #fff0f3; color: #9b1239; display: flex; border: 1px solid #fecdd3; }
+  .spinner { width: 18px; height: 18px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dl-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 12px 20px; background: var(--accent); color: var(--white); border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; transition: opacity 0.15s; }
+  .dl-link:hover { opacity: 0.88; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span style="font-family:'DM Serif Display',serif;font-size:22px;color:white;font-weight:400;letter-spacing:.04em">PASSEDEVANT</span>
+  <div class="header-sep"></div>
+  <span class="header-title">Générateur de contrat de maintenance</span>
+  <span class="header-badge">Maintenance adaptative</span>
+</header>
+
+<main class="main">
+  <div class="intro">
+    <h1>Nouveau contrat client</h1>
+    <p>Remplis les informations ci-dessous puis clique sur <strong>Générer le contrat</strong>.<br>
+    Le fichier Word personnalisé sera prêt à télécharger en quelques secondes.</p>
+  </div>
+
+  <form id="contractForm" novalidate>
+
+    <div class="card">
+      <div class="card-header"><div class="card-num">1</div><span class="card-title">Informations client</span></div>
+      <div class="card-body">
+        <div class="grid grid-2">
+          <div class="field"><label for="clientNom">Raison sociale *</label><input type="text" id="clientNom" placeholder="Ex : Acme SAS" required></div>
+          <div class="field"><label for="clientSiret">SIRET *</label><input type="text" id="clientSiret" placeholder="Ex : 123 456 789 00012" required></div>
+        </div>
+        <div class="grid" style="margin-top:18px">
+          <div class="field"><label for="clientSiege">Adresse du siège social *</label><input type="text" id="clientSiege" placeholder="Ex : 12 rue de la Paix, 75001 Paris" required></div>
+        </div>
+        <div class="grid grid-2" style="margin-top:18px">
+          <div class="field"><label for="clientSignataire">Signataire (interlocuteur) *</label><input type="text" id="clientSignataire" placeholder="Ex : M. Jean Dupont, Gérant" required></div>
+          <div class="field"><label for="clientEmail">E-mail du client</label><input type="email" id="clientEmail" placeholder="contact@client.fr"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-num">2</div><span class="card-title">Informations site</span></div>
+      <div class="card-body">
+        <div class="grid grid-2">
+          <div class="field"><label for="siteUrl">URL du site *</label><input type="text" id="siteUrl" placeholder="https://..." required></div>
+          <div class="field"><label for="siteCms">CMS utilisé *</label><input type="text" id="siteCms" placeholder="Ex : WordPress, Prestashop…" required></div>
+        </div>
+        <div class="grid grid-3" style="margin-top:18px">
+          <div class="field">
+            <label for="siteType">Type de site *</label>
+            <select id="siteType" required>
+              <option value="">— Choisir —</option>
+              <option value="Site vitrine simple">Vitrine simple</option>
+              <option value="Site vitrine complexe">Vitrine complexe</option>
+              <option value="Site e-commerce">E-commerce</option>
+            </select>
+          </div>
+          <div class="field"><label for="hebergeur">Hébergeur</label><input type="text" id="hebergeur" placeholder="Ex : OVH, Infomaniak…"></div>
+          <div class="field"><label for="nbPlugins">Nb de plugins actifs</label><input type="text" id="nbPlugins" placeholder="Ex : 14"></div>
+        </div>
+        <div class="grid grid-2" style="margin-top:18px">
+          <div class="field">
+            <label for="ecommerce">Module e-commerce</label>
+            <select id="ecommerce">
+              <option value="Non">Non</option>
+              <option value="WooCommerce">WooCommerce</option>
+              <option value="Oui">Oui (autre)</option>
+            </select>
+          </div>
+          <div class="field"><label for="interlocuteurClient">Interlocuteur côté client *</label><input type="text" id="interlocuteurClient" placeholder="Prénom Nom" required></div>
+        </div>
+        <div class="grid" style="margin-top:18px">
+          <div class="field"><label for="interlocuteurPresta">Interlocuteur Passedevant</label><input type="text" id="interlocuteurPresta" value="Anne-Sophie Fouquereau" placeholder="Anne-Sophie Fouquereau"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-num">3</div><span class="card-title">Conditions financières</span></div>
+      <div class="card-body">
+        <div class="tarif-row">
+          <div class="field"><label for="forfaitLabel">Libellé du forfait *</label><input type="text" id="forfaitLabel" placeholder="Ex : Site vitrine simple" required></div>
+          <div class="field"><label for="forfaitMensuel">Tarif mensuel HT (€) *</label><input type="number" id="forfaitMensuel" placeholder="70" min="1" required oninput="computeAnnuel()"></div>
+          <div class="field"><label>Tarif annuel HT</label><div class="tarif-computed" id="tarif-annuel">—</div></div>
+        </div>
+        <p class="hint" style="margin-top:10px">Le tarif annuel est calculé automatiquement × 12. Les interventions hors forfait sont facturées 85 € HT/h (tarif 2026).</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-num">4</div><span class="card-title">Dates et signature</span></div>
+      <div class="card-body">
+        <div class="grid grid-3">
+          <div class="field"><label for="dateEffet">Date de prise d'effet *</label><input type="text" id="dateEffet" placeholder="Ex : 1er mai 2026" required></div>
+          <div class="field"><label for="dateSignature">Date de signature *</label><input type="text" id="dateSignature" placeholder="Ex : 28 avril 2026" required></div>
+          <div class="field"><label for="lieuSignature">Lieu de signature</label><input type="text" id="lieuSignature" value="Nantes" placeholder="Nantes"></div>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-generate" id="btnGenerate">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Générer le contrat Word
+    </button>
+
+    <div class="status" id="statusBox">
+      <div class="spinner" id="spinner" style="display:none"></div>
+      <span id="statusText"></span>
+    </div>
+    <div id="dlArea"></div>
+  </form>
+</main>
+
+<!-- docx.js chargé depuis CDN jsDelivr (compatible file://) -->
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+
+<script>
+function computeAnnuel() {
+  const m = parseFloat(document.getElementById('forfaitMensuel').value);
+  const el = document.getElementById('tarif-annuel');
+  el.textContent = (!isNaN(m) && m > 0) ? (m * 12).toLocaleString('fr-FR') + ' € HT' : '—';
+}
+
+document.getElementById('siteType').addEventListener('change', function() {
+  const lbl = document.getElementById('forfaitLabel');
+  if (!lbl.value || ['Site vitrine simple','Site vitrine complexe','Site e-commerce'].includes(lbl.value))
+    lbl.value = this.value;
+});
+
+function validateForm() {
+  const ids = ['clientNom','clientSiret','clientSiege','clientSignataire','siteUrl','siteCms','siteType','interlocuteurClient','forfaitLabel','forfaitMensuel','dateEffet','dateSignature'];
+  let ok = true;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('error');
+    if (!el.value.trim()) { el.classList.add('error'); ok = false; }
+  });
+  return ok;
+}
+
+function setStatus(type, text, spinner = false) {
+  const box = document.getElementById('statusBox');
+  box.className = 'status ' + type;
+  document.getElementById('spinner').style.display = spinner ? 'block' : 'none';
+  document.getElementById('statusText').textContent = text;
+}
+
+document.getElementById('contractForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  document.getElementById('dlArea').innerHTML = '';
+  if (!validateForm()) { setStatus('error', 'Merci de remplir tous les champs obligatoires (surlignés en rouge).'); return; }
+
+  const m = parseFloat(document.getElementById('forfaitMensuel').value);
+  const p = {
+    clientNom:           document.getElementById('clientNom').value.trim(),
+    clientSiege:         document.getElementById('clientSiege').value.trim(),
+    clientSiret:         document.getElementById('clientSiret').value.trim(),
+    clientSignataire:    document.getElementById('clientSignataire').value.trim(),
+    clientEmail:         document.getElementById('clientEmail').value.trim(),
+    siteUrl:             document.getElementById('siteUrl').value.trim(),
+    siteCms:             document.getElementById('siteCms').value.trim(),
+    siteType:            document.getElementById('siteType').value,
+    hebergeur:           document.getElementById('hebergeur').value.trim() || 'Non précisé',
+    nbPlugins:           document.getElementById('nbPlugins').value.trim() || 'Non précisé',
+    ecommerce:           document.getElementById('ecommerce').value,
+    interlocuteurClient: document.getElementById('interlocuteurClient').value.trim(),
+    interlocuteurPresta: document.getElementById('interlocuteurPresta').value.trim() || 'Anne-Sophie Fouquereau',
+    forfaitLabel:        document.getElementById('forfaitLabel').value.trim(),
+    forfaitMensuel:      m.toString(),
+    forfaitAnnuel:       (m * 12).toString(),
+    dateEffet:           document.getElementById('dateEffet').value.trim(),
+    dateSignature:       document.getElementById('dateSignature').value.trim(),
+    lieuSignature:       document.getElementById('lieuSignature').value.trim() || 'Nantes',
+  };
+
+  document.getElementById('btnGenerate').disabled = true;
+  setStatus('info', 'Construction du document Word…', true);
+
+  try {
+    await generateDocx(p, `Contrat_Maintenance_${p.clientNom.replace(/\s+/g,'_')}.docx`);
+  } catch(err) {
+    console.error(err);
+    setStatus('error', 'Erreur lors de la génération : ' + err.message);
+  }
+  document.getElementById('btnGenerate').disabled = false;
+});
+
+async function generateDocx(p, filename) {
+  // Attendre que docx.js soit disponible (chargement async possible)
+  let attempts = 0;
+  while (!window.docx && attempts < 30) { await new Promise(r => setTimeout(r, 200)); attempts++; }
+  if (!window.docx) throw new Error('La bibliothèque docx.js n\'a pas pu être chargée. Vérifiez votre connexion internet.');
+
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, HeadingLevel, BorderStyle, WidthType, ShadingType, PageBreak, Footer } = window.docx;
+
+  const BLACK = "000000", BORDER_GRAY = "CCCCCC", WHITE = "FFFFFF";
+  const PAGE_W = 11906, MARGIN_LR = 1300, CONTENT_W = PAGE_W - MARGIN_LR * 2;
+
+  const sb = { style: BorderStyle.SINGLE, size: 1, color: BORDER_GRAY };
+  const borders = { top: sb, bottom: sb, left: sb, right: sb };
+  const nob = { style: BorderStyle.NONE, size: 0, color: WHITE };
+  const noBorders = { top: nob, bottom: nob, left: nob, right: nob };
+
+  const h1 = t => new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 420, after: 180 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: t, font: "Arial", size: 27, bold: true, color: BLACK })] });
+  const h2 = t => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 140 }, children: [new TextRun({ text: t, font: "Arial", size: 23, bold: true, color: BLACK })] });
+  const body = (t, opts={}) => new Paragraph({ spacing: { before: 100, after: 100, line: 320, lineRule: "auto" }, children: [new TextRun({ text: t, font: "Arial", size: 21, color: BLACK, ...opts })] });
+  const bodyBold = t => body(t, { bold: true });
+  const bullet = t => new Paragraph({ bullet: { level: 0 }, spacing: { before: 80, after: 80, line: 300, lineRule: "auto" }, children: [new TextRun({ text: t, font: "Arial", size: 21, color: BLACK })] });
+  const spacer = (s=140) => new Paragraph({ spacing: { before: s, after: 0 }, children: [new TextRun("")] });
+  const pb = () => new Paragraph({ children: [new PageBreak()] });
+
+  const cellOpts = (w) => ({ borders, width: { size: w, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 100, bottom: 100, left: 140, right: 140 } });
+  const twoCol = (label, value) => new TableRow({ children: [
+    new TableCell({ ...cellOpts(3600), children: [new Paragraph({ children: [new TextRun({ text: label, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
+    new TableCell({ ...cellOpts(CONTENT_W-3600), children: [new Paragraph({ children: [new TextRun({ text: value, font: "Arial", size: 21, color: BLACK })] })] }),
+  ]});
+  const thRow = (cells, widths) => new TableRow({ tableHeader: true, children: cells.map((t,i) => new TableCell({ ...cellOpts(widths[i]), shading: { fill: BLACK, type: ShadingType.CLEAR }, margins: { top: 100, bottom: 100, left: 140, right: 140 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t, font: "Arial", size: 21, bold: true, color: WHITE })] })] })) });
+  const slaRow = (s, d) => new TableRow({ children: [
+    new TableCell({ ...cellOpts(6200), children: [new Paragraph({ children: [new TextRun({ text: s, font: "Arial", size: 21, color: BLACK })] })] }),
+    new TableCell({ ...cellOpts(CONTENT_W-6200), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: d, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
+  ]});
+  const webRow = (h, t, r) => new TableRow({ children: [
+    new TableCell({ ...cellOpts(2600), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
+    new TableCell({ ...cellOpts(2600), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t, font: "Arial", size: 21, color: BLACK })] })] }),
+    new TableCell({ ...cellOpts(CONTENT_W-5200), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
+  ]});
+
+  const footerInfo = "PASSEDEVANT — SARL au capital de 5 000 € — 1 boulevard Jean Moulin, 44100 Nantes — SIREN 841 367 717 — TVA FR09841367717";
+
+  const tocItems = [
+    ["Article 1","Définitions"],["Article 2","Objet du contrat"],["Article 3","Description du site concerné"],
+    ["Article 4","Périmètre des prestations incluses"],["Article 5","Exclusions explicites"],
+    ["Article 6","Obligations du PRESTATAIRE"],["Article 7","Obligations du CLIENT"],
+    ["Article 8","Niveaux de service (SLA)"],["Article 9","Gestion des incidents post-mise à jour"],
+    ["Article 10","Technologies et accès"],["Article 11","Conditions financières"],
+    ["Article 12","Propriété intellectuelle"],["Article 13","Confidentialité et sécurité des accès"],
+    ["Article 14","Licéité du contenu du site web"],["Article 15","Déclarations des Parties"],
+    ["Article 16","Échanges, preuves et notifications"],["Article 17","Limitation de responsabilité"],
+    ["Article 18","Durée, reconduction et résiliation"],["Article 19","Indépendance réciproque"],
+    ["Article 20","Collaboration et coopération"],["Article 21","Modification du contrat"],
+    ["Article 22","Divisibilité des clauses"],["Article 23","Droit applicable et langue du contrat"],
+    ["Article 24","Règlement des différends"],["Article 25","Élection de domicile"],
+    ["Annexe A","Tarifs webmastering (à titre indicatif — prix 2026)"],
+  ];
+
+  const doc = new Document({
+    styles: {
+      default: { document: { run: { font: "Arial", size: 21, color: BLACK } } },
+      paragraphStyles: [
+        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 27, bold: true, font: "Arial", color: BLACK }, paragraph: { spacing: { before: 420, after: 180 }, outlineLevel: 0 } },
+        { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 23, bold: true, font: "Arial", color: BLACK }, paragraph: { spacing: { before: 300, after: 140 }, outlineLevel: 1 } },
+      ]
+    },
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1300, bottom: 1440, left: 1300 } } },
+      footers: { default: new Footer({ children: [
+        new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GRAY, space: 8 } }, spacing: { before: 120, after: 60 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: footerInfo, font: "Arial", size: 16, color: BLACK })] }),
+      ]})},
+      children: [
+        // PAGE DE GARDE
+        new Paragraph({ spacing: { before: 400, after: 300 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PASSEDEVANT", font: "Arial", size: 48, bold: true, color: BLACK })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 100 }, children: [new TextRun({ text: "CONTRAT DE MAINTENANCE ADAPTATIVE", font: "Arial", size: 38, bold: true, color: BLACK })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: "Gestion des mises à jour — Site Internet", font: "Arial", size: 24, color: BLACK, italics: true })] }),
+        spacer(400),
+        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [3600, CONTENT_W-3600], rows: [
+          twoCol("PRESTATAIRE","PASSEDEVANT"), twoCol("Siège social","1 boulevard Jean Moulin, 44100 Nantes"),
+          twoCol("SIREN","841 367 717"), twoCol("N° TVA intracommunautaire","FR09841367717"),
+          twoCol("CLIENT",p.clientNom), twoCol("Siège social client",p.clientSiege),
+          twoCol("SIRET client",p.clientSiret), twoCol("Signataire",p.clientSignataire),
+          twoCol("Site Internet",p.siteUrl), twoCol("Type de site",p.siteType),
+          twoCol("Date de prise d'effet",p.dateEffet),
+        ]}),
+        spacer(300),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Fait à ${p.lieuSignature}, le ${p.dateSignature}`, font: "Arial", size: 21, color: BLACK })] }),
+        pb(),
+
+        // TABLE DES MATIÈRES
+        new Paragraph({ spacing: { before: 200, after: 320 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: "TABLE DES MATIÈRES", font: "Arial", size: 30, bold: true, color: BLACK })] }),
+        ...tocItems.map(([num, title]) => new Paragraph({ spacing: { before: 80, after: 80, line: 300, lineRule: "auto" }, children: [new TextRun({ text: `${num} — ${title}`, font: "Arial", size: 21, color: BLACK })] })),
+        pb(),
+
+        // PRÉAMBULE
+        new Paragraph({ spacing: { before: 200, after: 200 }, children: [new TextRun({ text: "ENTRE LES SOUSSIGNÉS", font: "Arial", size: 23, bold: true, color: BLACK, underline: {} })] }),
+        body("La société PASSEDEVANT, SARL au capital de 5 000 €, dont le siège social est situé 1 boulevard Jean Moulin, 44100 Nantes, immatriculée au Registre du Commerce et des Sociétés de Nantes sous le numéro 841 367 717, numéro de TVA intracommunautaire FR09841367717 (ci-après « le PRESTATAIRE »),"),
+        spacer(100), body("ET"), spacer(100),
+        body(`${p.clientNom}, dont le siège social est situé ${p.clientSiege}, immatriculée sous le numéro SIRET ${p.clientSiret} (ci-après « le CLIENT »),`),
+        spacer(100),
+        body("Le PRESTATAIRE et le CLIENT sont ci-après dénommés individuellement ou collectivement « la Partie » ou « les Parties »."),
+        spacer(200),
+        new Paragraph({ spacing: { before: 100, after: 100 }, children: [new TextRun({ text: "IL EST PRÉALABLEMENT EXPOSÉ CE QUI SUIT :", font: "Arial", size: 21, bold: true, underline: {}, color: BLACK })] }),
+        spacer(100),
+        body(`Le CLIENT a pris contact avec le PRESTATAIRE pour la mise en œuvre de la maintenance de son site Internet accessible à l'adresse : ${p.siteUrl}.`),
+        spacer(100),
+        body("Le PRESTATAIRE a déclaré pouvoir justifier des compétences et de l'expérience nécessaires pour assurer cette mission."),
+        spacer(100),
+        new Paragraph({ spacing: { before: 100, after: 100 }, children: [new TextRun({ text: "IL EST DONC ARRÊTÉ ET CONVENU CE QUI SUIT :", font: "Arial", size: 21, bold: true, underline: {}, color: BLACK })] }),
+        spacer(200),
+
+        h1("Article 1 — Définitions"),
+        body("Au sens du présent contrat, on entend par :"), spacer(100),
+        bullet("CMS (Content Management System) : logiciel de gestion de contenu permettant de créer et administrer un site web."),
+        bullet("Plugin / Extension : module complémentaire installé sur le CMS pour ajouter des fonctionnalités spécifiques."),
+        bullet("Thème : gabarit graphique et structurel définissant l'apparence visuelle du site."),
+        bullet("Sauvegarde (backup) : copie complète du site (fichiers + base de données) permettant sa restauration."),
+        bullet("Mise à jour de sécurité : correctif visant à combler une faille identifiée dans le CMS, un plugin, un thème ou l'environnement serveur."),
+        bullet("Régression : dysfonctionnement apparu sur le site en conséquence directe d'une mise à jour."),
+        bullet("Ticket : demande formelle d'intervention transmise par écrit par le CLIENT au PRESTATAIRE."),
+        bullet("SLA (Service Level Agreement) : engagement contractuel sur les délais de prise en charge des interventions."),
+        bullet("Maintenance adaptative : opérations visant à adapter le site à l'évolution des technologies et des versions logicielles. C'est l'objet exclusif du présent contrat."),
+        bullet("Maintenance corrective : correction de dysfonctionnements. Non incluse dans le présent contrat."),
+        bullet("Maintenance évolutive : création ou modification de fonctionnalités. Non incluse dans le présent contrat."),
+        spacer(200),
+
+        h1("Article 2 — Objet du contrat"),
+        body("Le présent contrat a pour objet exclusif la maintenance adaptative du site Internet du CLIENT. Il ne couvre pas la maintenance corrective, la maintenance évolutive, la refonte du site ni la gestion du nom de domaine ou de l'hébergement."),
+        spacer(200),
+
+        h1("Article 3 — Description du site concerné"),
+        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [3600, CONTENT_W-3600], rows: [
+          twoCol("URL du site",p.siteUrl), twoCol("CMS utilisé",p.siteCms),
+          twoCol("Type de site",p.siteType), twoCol("Hébergeur",p.hebergeur),
+          twoCol("Nombre de plugins actifs (approx.)",p.nbPlugins),
+          twoCol("Module e-commerce",p.ecommerce),
+          twoCol("Interlocuteur CLIENT désigné",p.interlocuteurClient),
+          twoCol("Interlocuteur PRESTATAIRE désigné",p.interlocuteurPresta),
+        ]}),
+        spacer(200),
+
+        h1("Article 4 — Périmètre des prestations incluses"),
+        h2("4.1 — Prestations communes à tous les forfaits"),
+        bullet("Sauvegarde complète avant toute intervention, stockée sur serveur distant, conservée 30 jours glissants ;"),
+        bullet("Mise à jour du cœur du CMS, des extensions, du thème actif et de la version PHP ;"),
+        bullet("Vérification du bon fonctionnement dans les 72 heures suivant chaque intervention ;"),
+        bullet("Rapport mensuel d'intervention au CLIENT par e-mail ;"),
+        bullet("Surveillance mensuelle de la disponibilité du site."),
+        h2("4.2 — Selon le type de site"),
+        bodyBold("Site vitrine simple"), spacer(60),
+        bullet("Fréquence : 1 intervention mensuelle — jusqu'à 1 heure incluse."),
+        spacer(80), bodyBold("Site vitrine complexe"), spacer(60),
+        bullet("Fréquence : 1 à 2 interventions mensuelles — jusqu'à 2 heures incluses."),
+        spacer(80), bodyBold("Site e-commerce"), spacer(60),
+        bullet("Vérification du tunnel d'achat complet et des passerelles de paiement après chaque update — jusqu'à 3 heures incluses."),
+        spacer(200),
+
+        h1("Article 5 — Exclusions explicites"),
+        bullet("Correction de bugs préexistants à la signature ;"),
+        bullet("Interventions liées à un piratage (sauf faute du PRESTATAIRE) ;"),
+        bullet("Migration d'hébergeur ou de CMS ;"),
+        bullet("Refonte ou ajout de fonctionnalités ;"),
+        bullet("Mises à jour de contenu (textes, images, produits) ;"),
+        bullet("Développement sur mesure ou intégration d'API tierce ;"),
+        bullet("Interventions suite à modification par le CLIENT ou un tiers sans accord préalable."),
+        spacer(120),
+        body("Toute heure supplémentaire est facturée au tarif figurant à l'Annexe A, sur devis préalablement accepté."),
+        spacer(200),
+
+        h1("Article 6 — Obligations du PRESTATAIRE"),
+        bullet("Maintenir les compétences nécessaires et désigner un interlocuteur référent ;"),
+        bullet("Respecter la confidentialité des accès et données du CLIENT ;"),
+        bullet("Ne pas sous-traiter les accès sensibles sans accord écrit préalable ;"),
+        bullet("Archiver les rapports d'intervention pendant toute la durée du contrat ;"),
+        bullet("Informer le CLIENT avant toute mise à jour à risque élevé."),
+        spacer(200),
+
+        h1("Article 7 — Obligations du CLIENT"),
+        bullet("Fournir et maintenir à jour tous les accès nécessaires (CMS, FTP, hébergeur, BDD, DNS) ;"),
+        bullet("Ne pas effectuer de mises à jour manuelles sans en informer le PRESTATAIRE par écrit ;"),
+        bullet("Ne pas permettre à un tiers d'intervenir sans accord préalable écrit ;"),
+        bullet("Signaler tout dysfonctionnement sans délai via un ticket écrit ;"),
+        bullet("Payer les factures à réception."),
+        spacer(200),
+
+        h1("Article 8 — Niveaux de service (SLA)"),
+        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [6200, CONTENT_W-6200], rows: [
+          thRow(["Situation","Délai de prise en charge"],[6200, CONTENT_W-6200]),
+          slaRow("Régression critique (site hors ligne, tunnel de paiement cassé)","4 heures ouvrées"),
+          slaRow("Régression fonctionnelle majeure","24 heures ouvrées"),
+          slaRow("Demande standard ou question technique","72 heures ouvrées"),
+        ]}),
+        spacer(120),
+        body("Jours ouvrés — lundi au vendredi, 9h–18h, hors jours fériés."),
+        spacer(200),
+
+        h1("Article 9 — Gestion des incidents post-mise à jour"),
+        body("En cas de régression dans les 72h suivant une intervention, le PRESTATAIRE analyse l'incident, restaure la sauvegarde si nécessaire et applique une correction sans surcoût. Au-delà de 72h, toute anomalie constitue une nouvelle demande et peut être facturée."),
+        spacer(200),
+
+        h1("Article 10 — Technologies et accès"),
+        body("Le PRESTATAIRE intervient à distance dans l'environnement technique du CLIENT (CMS, FTP/SFTP, panel hébergeur, base de données, DNS si nécessaire)."),
+        spacer(200),
+
+        h1("Article 11 — Conditions financières"),
+        h2("11.1 — Forfait mensuel"),
+        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [5200, 2000, 2106], rows: [
+          thRow(["Prestation","Tarif mensuel HT","Tarif annuel HT"],[5200, 2000, 2106]),
+          new TableRow({ children: [
+            new TableCell({ ...cellOpts(5200), children: [new Paragraph({ children: [new TextRun({ text: `Maintenance adaptative — ${p.forfaitLabel}`, font: "Arial", size: 21, color: BLACK })] })] }),
+            new TableCell({ ...cellOpts(2000), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${p.forfaitMensuel} € HT`, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
+            new TableCell({ ...cellOpts(2106), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${p.forfaitAnnuel} € HT`, font: "Arial", size: 21, color: BLACK })] })] }),
+          ]}),
+        ]}),
+        h2("11.2 — Hors forfait"),
+        body("85 € HT / heure (tarif 2026), sur devis accepté préalablement. Voir Annexe A."),
+        h2("11.3 — Révision tarifaire"),
+        body("Une fois par an, dans la limite de 15 %. Préavis de 2 mois. Sans contestation dans ce délai, le nouveau tarif est réputé accepté."),
+        h2("11.4 — Paiement"),
+        body("Facturation mensuelle, paiement à réception de facture par virement bancaire. Pénalités de retard : taux légal × 3. Indemnité forfaitaire de recouvrement : 40 € HT par facture impayée (art. L.441-10 C.com)."),
+        spacer(200),
+
+        h1("Article 12 — Propriété intellectuelle"),
+        body("Les droits de propriété intellectuelle sur les contenus du CLIENT lui appartiennent. Le PRESTATAIRE cède au CLIENT l'ensemble des droits résultant de ses travaux. Le CLIENT reste seul responsable de ses contenus."),
+        spacer(200),
+
+        h1("Article 13 — Confidentialité et sécurité des accès"),
+        body("Les Parties maintiennent la confidentialité des informations échangées. Le PRESTATAIRE restitue et supprime tous les accès dans les 15 jours suivant la fin du contrat."),
+        spacer(200),
+
+        h1("Article 14 — Licéité du contenu du site web"),
+        body("Les Parties s'engagent à respecter les législations en vigueur, notamment le RGPD et la loi Informatique et Libertés."),
+        spacer(200),
+
+        h1("Article 15 — Déclarations des Parties"),
+        h2("15.1 — Le PRESTATAIRE déclare"),
+        bullet("Posséder les compétences nécessaires et fournir ses services de façon professionnelle ;"),
+        bullet("Ne pas utiliser les informations du CLIENT à d'autres fins que l'exécution du contrat."),
+        h2("15.2 — Le CLIENT déclare"),
+        bullet("Que son site ne contiendra aucun élément illicite ;"),
+        bullet("Qu'il connaît les caractéristiques et limites du réseau Internet."),
+        spacer(200),
+
+        h1("Article 16 — Échanges, preuves et notifications"),
+        body("Les échanges par e-mail ont valeur de preuve. Toute notification formelle est adressée par LRAR ou e-mail à home@passedevant.net pour le PRESTATAIRE."),
+        spacer(200),
+
+        h1("Article 17 — Limitation de responsabilité"),
+        body("La responsabilité du PRESTATAIRE est plafonnée aux sommes perçues sur les 12 derniers mois. Il n'est pas responsable des dommages liés à une intervention non autorisée du CLIENT ou d'un tiers, ni aux cas de force majeure."),
+        spacer(200),
+
+        h1("Article 18 — Durée, reconduction et résiliation"),
+        h2("18.1 — Durée et reconduction"),
+        body(`Le contrat prend effet le ${p.dateEffet}, pour une durée d'un an, renouvelable tacitement chaque année.`),
+        h2("18.2 — Résiliation à l'échéance"),
+        body("Préavis de 2 mois avant la date anniversaire, notifié par e-mail à home@passedevant.net."),
+        h2("18.3 — Résiliation pour faute"),
+        body("15 jours après mise en demeure restée sans effet."),
+        h2("18.4 — Effets"),
+        body("Restitution des accès dans les 15 jours. Rapport d'état établi. Les sommes dues restent exigibles."),
+        spacer(200),
+
+        h1("Article 19 — Indépendance réciproque"),
+        body("Les Parties sont des professionnels indépendants. Le contrat ne crée ni société, ni mandat, ni subordination."),
+        spacer(200),
+
+        h1("Article 20 — Collaboration et coopération"),
+        body("Les Parties s'engagent à collaborer de bonne foi pour une exécution dans de bonnes conditions."),
+        spacer(200),
+
+        h1("Article 21 — Modification du contrat"),
+        body("Toute modification requiert un avenant signé. Le présent contrat annule tout engagement antérieur relatif à son objet."),
+        spacer(200),
+
+        h1("Article 22 — Divisibilité des clauses"),
+        body("La nullité d'une clause n'emporte pas nullité des autres."),
+        spacer(200),
+
+        h1("Article 23 — Droit applicable et langue du contrat"),
+        body("Droit français. La version française fait foi."),
+        spacer(200),
+
+        h1("Article 24 — Règlement des différends"),
+        body("Conciliation amiable sous 30 jours, puis médiation, puis Tribunal de Commerce de Nantes."),
+        spacer(200),
+
+        h1("Article 25 — Élection de domicile"),
+        body("Les Parties élisent domicile en leur siège social. Tout changement doit être notifié sous 8 jours."),
+        spacer(300),
+
+        // SIGNATURES
+        new Paragraph({ spacing: { before: 240, after: 180 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GRAY, space: 8 } }, children: [new TextRun({ text: "SIGNATURES", font: "Arial", size: 25, bold: true, color: BLACK })] }),
+        body(`Fait à ${p.lieuSignature}, le ${p.dateSignature}`),
+        body("En deux (2) exemplaires originaux."),
+        spacer(220),
+        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [4500, 306, 4500], rows: [
+          new TableRow({ children: [
+            new TableCell({ borders: noBorders, width: { size: 4500, type: WidthType.DXA }, children: [
+              new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: "Pour le PRESTATAIRE", font: "Arial", size: 21, bold: true, color: BLACK })] }),
+              new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: "Mme Anne-Sophie FOUQUEREAU — PASSEDEVANT", font: "Arial", size: 20, color: BLACK })] }),
+              new Paragraph({ children: [new TextRun({ text: "Signature :", font: "Arial", size: 21, color: BLACK })] }),
+              spacer(360),
+              new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_GRAY } }, children: [new TextRun("")] }),
+            ]}),
+            new TableCell({ borders: noBorders, width: { size: 306, type: WidthType.DXA }, children: [new Paragraph({ children: [new TextRun("")] })] }),
+            new TableCell({ borders: noBorders, width: { size: 4500, type: WidthType.DXA }, children: [
+              new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: "Pour le CLIENT", font: "Arial", size: 21, bold: true, color: BLACK })] }),
+              new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: p.clientSignataire + " — " + p.clientNom, font: "Arial", size: 20, color: BLACK })] }),
+              new Paragraph({ children: [new TextRun({ text: "Signature :", font: "Arial", size: 21, color: BLACK })] }),
+              spacer(360),
+              new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: BORDER_GRAY } }, children: [new TextRun("")] }),
+            ]}),
+          ]})
+        ]}),
+
+        pb(),
+
+        // ANNEXE A
+        new Paragraph({ spacing: { before: 200, after: 100 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: "ANNEXE A — Tarifs webmastering", font: "Arial", size: 30, bold: true, color: BLACK })] }),
+        new Paragraph({ spacing: { before: 120, after: 220 }, children: [new TextRun({ text: "À titre indicatif — Prix 2026 (hors forfait de maintenance adaptative)", font: "Arial", size: 21, italics: true, color: BLACK })] }),
+        bodyBold("Ce que comprennent les forfaits webmastering :"), spacer(80),
+        bullet("Création de nouvelles pages"),
+        bullet("Intégration de textes fournis par le CLIENT"),
+        bullet("Mise en forme et intégration d'images"),
+        bullet("Ajout de fonctionnalités"),
+        bullet("Travail de maillage interne"),
+        bullet("Tableau de bord de consommation de tickets"),
+        spacer(180),
+        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [2600, 2600, CONTENT_W-5200], rows: [
+          thRow(["Heures","Tarif forfait HT","Tarif horaire réel"],[2600, 2600, CONTENT_W-5200]),
+          webRow("Hors pack","—","85 € HT / heure"),
+          webRow("6 heures","450 € HT","75 € / h"),
+          webRow("12 heures","840 € HT","70 € / h"),
+          webRow("18 heures","1 170 € HT","65 € / h"),
+          webRow("24 heures","1 440 € HT","60 € / h"),
+        ]}),
+        spacer(160),
+        body("Ces prestations font l'objet d'un devis séparé, accepté par écrit avant toute intervention."),
+        spacer(80),
+        new Paragraph({ spacing: { before: 80, after: 80 }, children: [new TextRun({ text: "Prix 2026 — susceptibles de révision annuelle dans les conditions prévues à l'Article 11.3.", font: "Arial", size: 18, italics: true, color: BLACK })] }),
+      ]
+    }]
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  setStatus('success', 'Contrat généré avec succès !');
+  document.getElementById('dlArea').innerHTML = `
+    <a class="dl-link" href="${url}" download="${filename}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Télécharger — ${filename}
+    </a>`;
+}
+</script>
+</body>
+</html>
