@@ -525,6 +525,7 @@ async function generatePdf(p, filename) {
      [`Maintenance adaptative \u2014 ${p.forfaitLabel}`, `${p.forfaitMensuel} \u20ac HT`, `${p.forfaitAnnuel} \u20ac HT`]],
     [90, 40, 40]
   );
+  writeBody("Modalit\u00e9s de paiement, sous les conditions sign\u00e9es et accept\u00e9es dans le Devis li\u00e9.");
   writeTitle2("10.2 \u2014 Hors forfait");
   writeBody("85 \u20ac HT / heure (tarif 2026), sur devis accept\u00e9 pr\u00e9alablement. Voir Annexe A.");
   writeTitle2("10.3 \u2014 R\u00e9vision tarifaire");
