@@ -76,9 +76,6 @@
       <div class="card-body">
         <div class="grid grid-2">
           <div class="field"><label for="clientNom">Raison sociale *</label><input type="text" id="clientNom" placeholder="Ex : Acme SAS" required></div>
-          <div class="field"><label for="clientSiret">SIRET *</label><input type="text" id="clientSiret" placeholder="Ex : 123 456 789 00012" required></div>
-        </div>
-        <div class="grid" style="margin-top:18px">
           <div class="field"><label for="clientSiege">Adresse du siège social *</label><input type="text" id="clientSiege" placeholder="Ex : 12 rue de la Paix, 75001 Paris" required></div>
         </div>
         <div class="grid grid-2" style="margin-top:18px">
@@ -137,6 +134,16 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-header"><div class="card-num">4</div><span class="card-title">Dates et signature</span></div>
+      <div class="card-body">
+        <div class="grid grid-2">
+          <div class="field"><label for="dateEffet">Date de prise d'effet *</label><input type="text" id="dateEffet" placeholder="Ex : 1er mai 2026" required></div>
+          <div class="field"><label for="lieuSignature">Lieu de signature</label><input type="text" id="lieuSignature" value="Nantes" placeholder="Nantes"></div>
+        </div>
+      </div>
+    </div>
+
     <button type="submit" class="btn-generate" id="btnGeneratePdf">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Générer le contrat PDF
@@ -168,7 +175,7 @@ document.getElementById('siteType').addEventListener('change', function() {
 });
 
 function validateForm() {
-  const ids = ['clientNom','clientSiret','clientSiege','clientSignataire','siteUrl','siteCms','siteType','interlocuteurClient','forfaitLabel','forfaitMensuel'];
+  const ids = ['clientNom','clientSiege','clientSignataire','siteUrl','siteCms','siteType','interlocuteurClient','forfaitLabel','forfaitMensuel','dateEffet'];
   let ok = true;
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -191,13 +198,10 @@ document.getElementById('contractForm').addEventListener('submit', async functio
   if (!validateForm()) { setStatus('error', 'Merci de remplir tous les champs obligatoires.'); return; }
 
   const m = parseFloat(document.getElementById('forfaitMensuel').value);
-  const today = new Date();
-  const dateEffet = `${today.getDate()} ${['janvier','f\u00e9vrier','mars','avril','mai','juin','juillet','ao\u00fbt','septembre','octobre','novembre','d\u00e9cembre'][today.getMonth()]} ${today.getFullYear()}`;
-
+  
   const p = {
     clientNom: document.getElementById('clientNom').value.trim(),
     clientSiege: document.getElementById('clientSiege').value.trim(),
-    clientSiret: document.getElementById('clientSiret').value.trim(),
     clientSignataire: document.getElementById('clientSignataire').value.trim(),
     clientEmail: document.getElementById('clientEmail').value.trim(),
     siteUrl: document.getElementById('siteUrl').value.trim(),
@@ -211,7 +215,9 @@ document.getElementById('contractForm').addEventListener('submit', async functio
     forfaitLabel: document.getElementById('forfaitLabel').value.trim(),
     forfaitMensuel: m.toString(),
     forfaitAnnuel: (m * 12).toString(),
-    dateEffet, dateSignature: dateEffet, lieuSignature: 'Nantes',
+    dateEffet: document.getElementById('dateEffet').value.trim(),
+    dateSignature: document.getElementById('dateEffet').value.trim(),
+    lieuSignature: document.getElementById('lieuSignature').value.trim() || 'Nantes',
   };
 
   document.getElementById('btnGeneratePdf').disabled = true;
@@ -368,7 +374,6 @@ async function generatePdf(p, filename) {
     ["N\u00b0 TVA intracommunautaire", "FR09841367717"],
     ["CLIENT", p.clientNom],
     ["Si\u00e8ge social client", p.clientSiege],
-    ["SIRET client", p.clientSiret],
     ["Signataire", p.clientSignataire],
     ["Site Internet", p.siteUrl],
     ["Type de site", p.siteType],
@@ -414,7 +419,7 @@ async function generatePdf(p, filename) {
   writeTitle2("ENTRE LES SOUSSIGN\u00c9S");
   writeBody("La soci\u00e9t\u00e9 PASSEDEVANT, SARL au capital de 5 000 \u20ac, dont le si\u00e8ge social est situ\u00e9 1 boulevard Jean Moulin, 44100 Nantes, immatricul\u00e9e au Registre du Commerce et des Soci\u00e9t\u00e9s de Nantes sous le num\u00e9ro 841 367 717, num\u00e9ro de TVA intracommunautaire FR09841367717 (ci-apr\u00e8s \u00ab le PRESTATAIRE \u00bb),");
   writeBody("ET", { bold: true });
-  writeBody(`${p.clientNom}, dont le si\u00e8ge social est situ\u00e9 ${p.clientSiege}, immatricul\u00e9e sous le num\u00e9ro SIRET ${p.clientSiret} (ci-apr\u00e8s \u00ab le CLIENT \u00bb),`);
+  writeBody(`${p.clientNom}, dont le si\u00e8ge social est situ\u00e9 ${p.clientSiege} (ci-apr\u00e8s \u00ab le CLIENT \u00bb),`);
   writeBody("Le PRESTATAIRE et le CLIENT sont ci-apr\u00e8s d\u00e9nomm\u00e9s individuellement ou collectivement \u00ab la Partie \u00bb ou \u00ab les Parties \u00bb.");
   y += 4;
   writeBody("IL EST PR\u00c9ALABLEMENT EXPOS\u00c9 CE QUI SUIT :", { bold: true });
@@ -465,11 +470,11 @@ async function generatePdf(p, filename) {
   ].forEach(b => writeBullet(b));
   writeTitle2("4.2 \u2014 Selon le type de site");
   writeBody("Site vitrine simple", { bold: true });
-  writeBullet("Fr\u00e9quence : 1 intervention mensuelle \u2014 jusqu\u2019\u00e0 1 heure incluse.");
+  writeBullet("Fr\u00e9quence : 1 intervention mensuelle.");
   writeBody("Site vitrine complexe", { bold: true });
-  writeBullet("Fr\u00e9quence : 1 \u00e0 2 interventions mensuelles \u2014 jusqu\u2019\u00e0 2 heures incluses.");
+  writeBullet("Fr\u00e9quence : 1 \u00e0 2 interventions mensuelles.");
   writeBody("Site e-commerce", { bold: true });
-  writeBullet("V\u00e9rification du tunnel d\u2019achat complet et des passerelles de paiement apr\u00e8s chaque update \u2014 jusqu\u2019\u00e0 3 heures incluses.");
+  writeBullet("V\u00e9rification du tunnel d\u2019achat complet et des passerelles de paiement apr\u00e8s chaque update.");
 
   // ART 5
   writeTitle1("Article 5 \u2014 Exclusions explicites");
