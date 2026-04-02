@@ -220,7 +220,6 @@ document.getElementById('contractForm').addEventListener('submit', async functio
     lieuSignature: 'Nantes',
   };
 
-  document.getElementById('btnGenerate').disabled = true;
   document.getElementById('btnGeneratePdf').disabled = true;
   setStatus('info', 'Construction du document ' + (format === 'pdf' ? 'PDF' : 'Word') + '…', true);
 
@@ -234,7 +233,6 @@ document.getElementById('contractForm').addEventListener('submit', async functio
     console.error(err);
     setStatus('error', 'Erreur lors de la génération : ' + err.message);
   }
-  document.getElementById('btnGenerate').disabled = false;
   document.getElementById('btnGeneratePdf').disabled = false;
 });
 
