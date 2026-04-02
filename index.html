@@ -67,7 +67,7 @@
   <div class="intro">
     <h1>Nouveau contrat client</h1>
     <p>Remplis les informations ci-dessous puis clique sur <strong>Générer le contrat</strong>.<br>
-    Le fichier Word personnalisé sera prêt à télécharger en quelques secondes.</p>
+    Le fichier sera prêt à télécharger en quelques secondes.</p>
   </div>
 
   <form id="contractForm" novalidate>
@@ -138,14 +138,8 @@
       </div>
     </div>
 
-
-
     <div style="display:flex;gap:14px;margin-top:28px">
-      <button type="submit" class="btn-generate" id="btnGenerate" name="format" value="docx" style="flex:1">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Générer en Word
-      </button>
-      <button type="submit" class="btn-generate" id="btnGeneratePdf" name="format" value="pdf" style="flex:1">
+      <button type="submit" class="btn-generate" id="btnGeneratePdf" name="format" value="pdf" style="flex:1;background:#e8194b">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Générer en PDF
       </button>
@@ -159,9 +153,7 @@
   </form>
 </main>
 
-<!-- docx.js chargé depuis CDN jsDelivr (compatible file://) -->
 <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
-<!-- jsPDF et html2canvas pour PDF generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
@@ -203,31 +195,29 @@ document.getElementById('contractForm').addEventListener('submit', async functio
   const m = parseFloat(document.getElementById('forfaitMensuel').value);
   const format = e.submitter.value || 'docx';
   
-  // Dates par défaut
   const today = new Date();
   const dateEffet = `${today.getDate()} ${['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][today.getMonth()]} ${today.getFullYear()}`;
   const dateSignature = dateEffet;
   
   const p = {
-    clientNom:           document.getElementById('clientNom').value.trim(),
-    clientSiege:         document.getElementById('clientSiege').value.trim(),
-    clientSiret:         document.getElementById('clientSiret').value.trim(),
-    clientSignataire:    document.getElementById('clientSignataire').value.trim(),
-    clientEmail:         document.getElementById('clientEmail').value.trim(),
-    siteUrl:             document.getElementById('siteUrl').value.trim(),
-    siteCms:             document.getElementById('siteCms').value.trim(),
-    siteType:            document.getElementById('siteType').value,
-    hebergeur:           document.getElementById('hebergeur').value.trim() || 'Non précisé',
-    nbPlugins:           document.getElementById('nbPlugins').value.trim() || 'Non précisé',
-    ecommerce:           document.getElementById('ecommerce').value,
+    clientNom: document.getElementById('clientNom').value.trim(),
+    clientSiege: document.getElementById('clientSiege').value.trim(),
+    clientSiret: document.getElementById('clientSiret').value.trim(),
+    clientSignataire: document.getElementById('clientSignataire').value.trim(),
+    clientEmail: document.getElementById('clientEmail').value.trim(),
+    siteUrl: document.getElementById('siteUrl').value.trim(),
+    siteCms: document.getElementById('siteCms').value.trim(),
+    siteType: document.getElementById('siteType').value,
+    hebergeur: document.getElementById('hebergeur').value.trim() || 'Non précisé',
+    nbPlugins: document.getElementById('nbPlugins').value.trim() || 'Non précisé',
+    ecommerce: document.getElementById('ecommerce').value,
     interlocuteurClient: document.getElementById('interlocuteurClient').value.trim(),
     interlocuteurPresta: document.getElementById('interlocuteurPresta').value.trim() || 'Anne-Sophie Fouquereau',
-    forfaitLabel:        document.getElementById('forfaitLabel').value.trim(),
-    forfaitMensuel:      m.toString(),
-    forfaitAnnuel:       (m * 12).toString(),
-    dateEffet:           dateEffet,
-    dateSignature:       dateSignature,
-    lieuSignature:       'Nantes',
+    forfaitLabel: document.getElementById('forfaitLabel').value.trim(),
+    forfaitMensuel: m.toString(),
+    forfaitAnnuel: (m * 12).toString(),
+    dateEffet, dateSignature,
+    lieuSignature: 'Nantes',
   };
 
   document.getElementById('btnGenerate').disabled = true;
@@ -248,8 +238,338 @@ document.getElementById('contractForm').addEventListener('submit', async functio
   document.getElementById('btnGeneratePdf').disabled = false;
 });
 
+/* ============================================================
+   GÉNÉRATION PDF — Construit un HTML complet puis html2pdf.js
+   ============================================================ */
+function buildContractHTML(p) {
+  const footerInfo = "PASSEDEVANT — SARL au capital de 5 000 € — 1 boulevard Jean Moulin, 44100 Nantes — SIREN 841 367 717 — TVA FR09841367717";
+  
+  const css = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; color: #0a0a0a; line-height: 1.5; }
+    h1 { font-size: 13.5pt; font-weight: bold; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #0a0a0a; }
+    h2 { font-size: 11.5pt; font-weight: bold; margin: 20px 0 10px; }
+    p { margin: 6px 0; }
+    ul { margin: 6px 0 6px 24px; }
+    li { margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; font-size: 10.5pt; text-align: left; }
+    th { background: #0a0a0a; color: #fff; font-weight: bold; text-align: center; }
+    .cover-title { text-align: center; font-size: 24pt; font-weight: bold; margin-top: 40px; }
+    .cover-subtitle { text-align: center; font-size: 19pt; font-weight: bold; margin: 16px 0 8px; }
+    .cover-sub2 { text-align: center; font-size: 12pt; font-style: italic; margin-bottom: 30px; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .page-break { page-break-before: always; }
+    .footer { font-size: 8pt; text-align: center; color: #555; border-top: 1px solid #ccc; padding-top: 8px; margin-top: 30px; }
+    .sig-table td { border: none; vertical-align: top; width: 45%; padding: 10px; }
+    .sig-table .spacer-col { width: 10%; }
+    .sig-line { border-bottom: 1px solid #ccc; height: 60px; margin-top: 20px; }
+    .toc-item { margin: 4px 0; }
+  `;
+
+  const tocItems = [
+    ["Article 1","Définitions"],["Article 2","Objet du contrat"],["Article 3","Description du site concerné"],
+    ["Article 4","Périmètre des prestations incluses"],["Article 5","Exclusions explicites"],
+    ["Article 6","Obligations du PRESTATAIRE"],["Article 7","Obligations du CLIENT"],
+    ["Article 8","Gestion des incidents post-mise à jour"],
+    ["Article 9","Technologies et accès"],["Article 10","Conditions financières"],
+    ["Article 11","Propriété intellectuelle"],["Article 12","Confidentialité et sécurité des accès"],
+    ["Article 13","Licéité du contenu du site web"],["Article 14","Déclarations des Parties"],
+    ["Article 15","Échanges, preuves et notifications"],["Article 16","Limitation de responsabilité"],
+    ["Article 17","Durée, reconduction et résiliation"],["Article 18","Indépendance réciproque"],
+    ["Article 19","Collaboration et coopération"],["Article 20","Modification du contrat"],
+    ["Article 21","Divisibilité des clauses"],["Article 22","Droit applicable et langue du contrat"],
+    ["Article 23","Règlement des différends"],["Article 24","Élection de domicile"],
+    ["Annexe A","Tarifs webmastering (à titre indicatif — prix 2026)"],
+  ];
+
+  return `<html><head><style>${css}</style></head><body>
+
+<!-- PAGE DE GARDE -->
+<div class="cover-title">PASSEDEVANT</div>
+<div class="cover-subtitle">CONTRAT DE MAINTENANCE ADAPTATIVE</div>
+<div class="cover-sub2">Gestion des mises à jour — Site Internet</div>
+
+<table>
+  <tr><td class="bold" style="width:35%">PRESTATAIRE</td><td>PASSEDEVANT</td></tr>
+  <tr><td class="bold">Siège social</td><td>1 boulevard Jean Moulin, 44100 Nantes</td></tr>
+  <tr><td class="bold">SIREN</td><td>841 367 717</td></tr>
+  <tr><td class="bold">N° TVA intracommunautaire</td><td>FR09841367717</td></tr>
+  <tr><td class="bold">CLIENT</td><td>${p.clientNom}</td></tr>
+  <tr><td class="bold">Siège social client</td><td>${p.clientSiege}</td></tr>
+  <tr><td class="bold">SIRET client</td><td>${p.clientSiret}</td></tr>
+  <tr><td class="bold">Signataire</td><td>${p.clientSignataire}</td></tr>
+  <tr><td class="bold">Site Internet</td><td>${p.siteUrl}</td></tr>
+  <tr><td class="bold">Type de site</td><td>${p.siteType}</td></tr>
+  <tr><td class="bold">Date de prise d'effet</td><td>${p.dateEffet}</td></tr>
+</table>
+
+<p class="center" style="margin-top:20px">Fait à ${p.lieuSignature}, le ${p.dateSignature}</p>
+<div class="footer">${footerInfo}</div>
+
+<!-- TABLE DES MATIÈRES -->
+<div class="page-break"></div>
+<h1 style="font-size:15pt">TABLE DES MATIÈRES</h1>
+${tocItems.map(([n,t]) => `<p class="toc-item">${n} — ${t}</p>`).join('')}
+<div class="footer">${footerInfo}</div>
+
+<!-- PRÉAMBULE -->
+<div class="page-break"></div>
+<h2>ENTRE LES SOUSSIGNÉS</h2>
+<p>La société PASSEDEVANT, SARL au capital de 5 000 €, dont le siège social est situé 1 boulevard Jean Moulin, 44100 Nantes, immatriculée au Registre du Commerce et des Sociétés de Nantes sous le numéro 841 367 717, numéro de TVA intracommunautaire FR09841367717 (ci-après « le PRESTATAIRE »),</p>
+<p style="margin:12px 0"><strong>ET</strong></p>
+<p>${p.clientNom}, dont le siège social est situé ${p.clientSiege}, immatriculée sous le numéro SIRET ${p.clientSiret} (ci-après « le CLIENT »),</p>
+<p>Le PRESTATAIRE et le CLIENT sont ci-après dénommés individuellement ou collectivement « la Partie » ou « les Parties ».</p>
+<p style="margin-top:16px"><strong>IL EST PRÉALABLEMENT EXPOSÉ CE QUI SUIT :</strong></p>
+<p>Le CLIENT a pris contact avec le PRESTATAIRE pour la mise en œuvre de la maintenance de son site Internet accessible à l'adresse : ${p.siteUrl}.</p>
+<p>Le PRESTATAIRE a déclaré pouvoir justifier des compétences et de l'expérience nécessaires pour assurer cette mission.</p>
+<p style="margin-top:12px"><strong>IL EST DONC ARRÊTÉ ET CONVENU CE QUI SUIT :</strong></p>
+
+<h1>Article 1 — Définitions</h1>
+<p>Au sens du présent contrat, on entend par :</p>
+<ul>
+  <li><strong>CMS</strong> (Content Management System) : logiciel de gestion de contenu permettant de créer et administrer un site web.</li>
+  <li><strong>Plugin / Extension</strong> : module complémentaire installé sur le CMS pour ajouter des fonctionnalités spécifiques.</li>
+  <li><strong>Thème</strong> : gabarit graphique et structurel définissant l'apparence visuelle du site.</li>
+  <li><strong>Sauvegarde (backup)</strong> : copie complète du site (fichiers + base de données) permettant sa restauration.</li>
+  <li><strong>Mise à jour de sécurité</strong> : correctif visant à combler une faille identifiée dans le CMS, un plugin, un thème ou l'environnement serveur.</li>
+  <li><strong>Régression</strong> : dysfonctionnement apparu sur le site en conséquence directe d'une mise à jour.</li>
+  <li><strong>Ticket</strong> : demande formelle d'intervention transmise par écrit par le CLIENT au PRESTATAIRE.</li>
+  <li><strong>SLA</strong> (Service Level Agreement) : engagement contractuel sur les délais de prise en charge des interventions.</li>
+  <li><strong>Maintenance adaptative</strong> : opérations visant à adapter le site à l'évolution des technologies et des versions logicielles. C'est l'objet exclusif du présent contrat.</li>
+  <li><strong>Maintenance corrective</strong> : correction de dysfonctionnements. Non incluse dans le présent contrat.</li>
+  <li><strong>Maintenance évolutive</strong> : création ou modification de fonctionnalités. Non incluse dans le présent contrat.</li>
+</ul>
+
+<h1>Article 2 — Objet du contrat</h1>
+<p>Le présent contrat a pour objet exclusif la maintenance adaptative du site Internet du CLIENT. Il ne couvre pas la maintenance corrective, la maintenance évolutive, la refonte du site ni la gestion du nom de domaine ou de l'hébergement.</p>
+
+<h1>Article 3 — Description du site concerné</h1>
+<table>
+  <tr><td class="bold" style="width:40%">URL du site</td><td>${p.siteUrl}</td></tr>
+  <tr><td class="bold">CMS utilisé</td><td>${p.siteCms}</td></tr>
+  <tr><td class="bold">Type de site</td><td>${p.siteType}</td></tr>
+  <tr><td class="bold">Hébergeur</td><td>${p.hebergeur}</td></tr>
+  <tr><td class="bold">Nombre de plugins actifs (approx.)</td><td>${p.nbPlugins}</td></tr>
+  <tr><td class="bold">Module e-commerce</td><td>${p.ecommerce}</td></tr>
+  <tr><td class="bold">Interlocuteur CLIENT désigné</td><td>${p.interlocuteurClient}</td></tr>
+  <tr><td class="bold">Interlocuteur PRESTATAIRE désigné</td><td>${p.interlocuteurPresta}</td></tr>
+</table>
+
+<h1>Article 4 — Périmètre des prestations incluses</h1>
+<h2>4.1 — Prestations communes à tous les forfaits</h2>
+<ul>
+  <li>Sauvegarde complète avant toute intervention, stockée sur serveur distant, conservée 30 jours glissants ;</li>
+  <li>Mise à jour du cœur du CMS, des extensions, du thème actif et de la version PHP ;</li>
+  <li>Vérification du bon fonctionnement dans les 48 heures suivant chaque intervention ;</li>
+  <li>Rapport mensuel d'intervention au CLIENT par e-mail ;</li>
+  <li>Surveillance mensuelle de la disponibilité du site.</li>
+</ul>
+<h2>4.2 — Selon le type de site</h2>
+<p><strong>Site vitrine simple</strong> — Fréquence : 1 intervention mensuelle — jusqu'à 1 heure incluse.</p>
+<p><strong>Site vitrine complexe</strong> — Fréquence : 1 à 2 interventions mensuelles — jusqu'à 2 heures incluses.</p>
+<p><strong>Site e-commerce</strong> — Vérification du tunnel d'achat complet et des passerelles de paiement après chaque update — jusqu'à 3 heures incluses.</p>
+
+<h1>Article 5 — Exclusions explicites</h1>
+<ul>
+  <li>Correction de bugs préexistants à la signature ;</li>
+  <li>Interventions liées à un piratage (sauf faute du PRESTATAIRE) ;</li>
+  <li>Migration d'hébergeur ou de CMS ;</li>
+  <li>Refonte ou ajout de fonctionnalités ;</li>
+  <li>Mises à jour de contenu (textes, images, produits) ;</li>
+  <li>Développement sur mesure ou intégration d'API tierce ;</li>
+  <li>Interventions suite à modification par le CLIENT ou un tiers sans accord préalable.</li>
+</ul>
+<p>Toute heure supplémentaire est facturée au tarif figurant à l'Annexe A, sur devis préalablement accepté.</p>
+
+<h1>Article 6 — Obligations du PRESTATAIRE</h1>
+<ul>
+  <li>Maintenir les compétences nécessaires et désigner un interlocuteur référent ;</li>
+  <li>Respecter la confidentialité des accès et données du CLIENT ;</li>
+  <li>Ne pas sous-traiter les accès sensibles sans accord écrit préalable ;</li>
+  <li>Archiver les rapports d'intervention pendant toute la durée du contrat ;</li>
+  <li>Informer le CLIENT avant toute mise à jour à risque élevé.</li>
+</ul>
+
+<h1>Article 7 — Obligations du CLIENT</h1>
+<ul>
+  <li>Fournir et maintenir à jour tous les accès nécessaires (CMS, FTP, hébergeur, BDD, DNS) ;</li>
+  <li>Ne pas effectuer de mises à jour manuelles sans en informer le PRESTATAIRE par écrit ;</li>
+  <li>Ne pas permettre à un tiers d'intervenir sans accord préalable écrit ;</li>
+  <li>Signaler tout dysfonctionnement sans délai via un ticket écrit ;</li>
+  <li>Payer les factures à réception.</li>
+</ul>
+
+<h1>Article 8 — Gestion des incidents post-mise à jour</h1>
+<p>En cas de régression dans les 48h suivant une intervention, le PRESTATAIRE analyse l'incident, restaure la sauvegarde si nécessaire et applique une correction sans surcoût. Au-delà de 48h, toute anomalie constitue une nouvelle demande et peut être facturée.</p>
+
+<h1>Article 9 — Technologies et accès</h1>
+<p>Le PRESTATAIRE intervient à distance dans l'environnement technique du CLIENT (CMS, FTP/SFTP, panel hébergeur, base de données, DNS si nécessaire).</p>
+
+<h1>Article 10 — Conditions financières</h1>
+<h2>10.1 — Forfait mensuel</h2>
+<table>
+  <tr><th>Prestation</th><th>Tarif mensuel HT</th><th>Tarif annuel HT</th></tr>
+  <tr><td>Maintenance adaptative — ${p.forfaitLabel}</td><td class="center bold">${p.forfaitMensuel} € HT</td><td class="center">${p.forfaitAnnuel} € HT</td></tr>
+</table>
+<h2>10.2 — Hors forfait</h2>
+<p>85 € HT / heure (tarif 2026), sur devis accepté préalablement. Voir Annexe A.</p>
+<h2>10.3 — Révision tarifaire</h2>
+<p>Une fois par an, dans la limite de 15 %. Préavis de 2 mois. Sans contestation dans ce délai, le nouveau tarif est réputé accepté.</p>
+<h2>10.4 — Paiement</h2>
+<p>Facturation mensuelle, paiement à réception de facture par virement bancaire. Pénalités de retard : taux légal × 3. Indemnité forfaitaire de recouvrement : 40 € HT par facture impayée (art. L.441-10 C.com).</p>
+
+<h1>Article 11 — Propriété intellectuelle</h1>
+<p>Les droits de propriété intellectuelle sur les contenus du CLIENT lui appartiennent. Le PRESTATAIRE cède au CLIENT l'ensemble des droits résultant de ses travaux. Le CLIENT reste seul responsable de ses contenus.</p>
+
+<h1>Article 12 — Confidentialité et sécurité des accès</h1>
+<p>Les Parties maintiennent la confidentialité des informations échangées. Le PRESTATAIRE restitue et supprime tous les accès dans les 15 jours suivant la fin du contrat.</p>
+
+<h1>Article 13 — Licéité du contenu du site web</h1>
+<p>Les Parties s'engagent à respecter les législations en vigueur, notamment le RGPD et la loi Informatique et Libertés.</p>
+
+<h1>Article 14 — Déclarations des Parties</h1>
+<h2>14.1 — Le PRESTATAIRE déclare</h2>
+<ul>
+  <li>Posséder les compétences nécessaires et fournir ses services de façon professionnelle ;</li>
+  <li>Ne pas utiliser les informations du CLIENT à d'autres fins que l'exécution du contrat.</li>
+</ul>
+<h2>14.2 — Le CLIENT déclare</h2>
+<ul>
+  <li>Que son site ne contiendra aucun élément illicite ;</li>
+  <li>Qu'il connaît les caractéristiques et limites du réseau Internet.</li>
+</ul>
+
+<h1>Article 15 — Échanges, preuves et notifications</h1>
+<p>Les échanges par e-mail ont valeur de preuve. Toute notification formelle est adressée par LRAR ou e-mail à home@passedevant.net pour le PRESTATAIRE.</p>
+
+<h1>Article 16 — Limitation de responsabilité</h1>
+<p>La responsabilité du PRESTATAIRE est plafonnée aux sommes perçues sur les 12 derniers mois. Il n'est pas responsable des dommages liés à une intervention non autorisée du CLIENT ou d'un tiers, ni aux cas de force majeure.</p>
+
+<h1>Article 17 — Durée, reconduction et résiliation</h1>
+<h2>17.1 — Durée et reconduction</h2>
+<p>Le contrat prend effet le ${p.dateEffet}, pour une durée d'un an, renouvelable tacitement chaque année.</p>
+<h2>17.2 — Résiliation à l'échéance</h2>
+<p>Préavis de 2 mois avant la date anniversaire, notifié par e-mail à home@passedevant.net.</p>
+<h2>17.3 — Résiliation pour faute</h2>
+<p>15 jours après mise en demeure restée sans effet.</p>
+<h2>17.4 — Effets</h2>
+<p>Restitution des accès dans les 15 jours. Rapport d'état établi. Les sommes dues restent exigibles.</p>
+
+<h1>Article 18 — Indépendance réciproque</h1>
+<p>Les Parties sont des professionnels indépendants. Le contrat ne crée ni société, ni mandat, ni subordination.</p>
+
+<h1>Article 19 — Collaboration et coopération</h1>
+<p>Les Parties s'engagent à collaborer de bonne foi pour une exécution dans de bonnes conditions.</p>
+
+<h1>Article 20 — Modification du contrat</h1>
+<p>Toute modification requiert un avenant signé. Le présent contrat annule tout engagement antérieur relatif à son objet.</p>
+
+<h1>Article 21 — Divisibilité des clauses</h1>
+<p>La nullité d'une clause n'emporte pas nullité des autres.</p>
+
+<h1>Article 22 — Droit applicable et langue du contrat</h1>
+<p>Droit français. La version française fait foi.</p>
+
+<h1>Article 23 — Règlement des différends</h1>
+<p>Conciliation amiable sous 30 jours, puis médiation, puis Tribunal de Commerce de Nantes.</p>
+
+<h1>Article 24 — Élection de domicile</h1>
+<p>Les Parties élisent domicile en leur siège social. Tout changement doit être notifié sous 8 jours.</p>
+
+<!-- SIGNATURES -->
+<div style="margin-top:40px; border-top:1px solid #ccc; padding-top:16px">
+  <h2>SIGNATURES</h2>
+  <p>Fait à ${p.lieuSignature}, le ${p.dateSignature}</p>
+  <p>En deux (2) exemplaires originaux.</p>
+  <table class="sig-table" style="margin-top:20px;border:none">
+    <tr>
+      <td style="border:none">
+        <p><strong>Pour le PRESTATAIRE</strong></p>
+        <p>Mme Anne-Sophie FOUQUEREAU — PASSEDEVANT</p>
+        <p style="margin-top:10px">Signature :</p>
+        <div class="sig-line"></div>
+      </td>
+      <td class="spacer-col" style="border:none"></td>
+      <td style="border:none">
+        <p><strong>Pour le CLIENT</strong></p>
+        <p>${p.clientSignataire} — ${p.clientNom}</p>
+        <p style="margin-top:10px">Signature :</p>
+        <div class="sig-line"></div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- ANNEXE A -->
+<div class="page-break"></div>
+<h1 style="font-size:15pt">ANNEXE A — Tarifs webmastering</h1>
+<p style="font-style:italic;margin-bottom:14px">À titre indicatif — Prix 2026 (hors forfait de maintenance adaptative)</p>
+<p><strong>Ce que comprennent les forfaits webmastering :</strong></p>
+<ul>
+  <li>Création de nouvelles pages</li>
+  <li>Intégration de textes fournis par le CLIENT</li>
+  <li>Mise en forme et intégration d'images</li>
+  <li>Ajout de fonctionnalités</li>
+  <li>Travail de maillage interne</li>
+  <li>Tableau de bord de consommation de tickets</li>
+</ul>
+<table style="margin-top:16px">
+  <tr><th>Heures</th><th>Tarif forfait HT</th><th>Tarif horaire réel</th></tr>
+  <tr><td class="center bold">Hors pack</td><td class="center">—</td><td class="center bold">85 € HT / heure</td></tr>
+  <tr><td class="center bold">6 heures</td><td class="center">450 € HT</td><td class="center bold">75 € / h</td></tr>
+  <tr><td class="center bold">12 heures</td><td class="center">840 € HT</td><td class="center bold">70 € / h</td></tr>
+  <tr><td class="center bold">18 heures</td><td class="center">1 170 € HT</td><td class="center bold">65 € / h</td></tr>
+  <tr><td class="center bold">24 heures</td><td class="center">1 440 € HT</td><td class="center bold">60 € / h</td></tr>
+</table>
+<p style="margin-top:12px">Ces prestations font l'objet d'un devis séparé, accepté par écrit avant toute intervention.</p>
+<p style="font-size:9pt;font-style:italic;margin-top:8px">Prix 2026 — susceptibles de révision annuelle dans les conditions prévues à l'Article 10.3.</p>
+<div class="footer">${footerInfo}</div>
+
+</body></html>`;
+}
+
 async function generatePdf(p, filename) {
-  // Générer le Word d'abord
+  // Attendre que html2pdf soit chargé
+  let attempts = 0;
+  while (!window.html2pdf && attempts < 30) { await new Promise(r => setTimeout(r, 200)); attempts++; }
+  if (!window.html2pdf) throw new Error('La bibliothèque html2pdf.js n\'a pas pu être chargée.');
+
+  // Construire le HTML du contrat
+  const htmlContent = buildContractHTML(p);
+
+  // Créer un conteneur invisible pour le rendu
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = '210mm';
+  container.innerHTML = htmlContent;
+  document.body.appendChild(container);
+
+  // Générer le PDF via html2pdf
+  const opt = {
+    margin: [15, 15, 20, 15],
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'], before: '.page-break' }
+  };
+
+  try {
+    await html2pdf().set(opt).from(container).save();
+    setStatus('success', 'PDF généré avec succès ! Le téléchargement devrait démarrer automatiquement.');
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+/* ============================================================
+   GÉNÉRATION DOCX — Identique à l'original
+   ============================================================ */
+async function generateDocx(p, filename) {
   let attempts = 0;
   while (!window.docx && attempts < 30) { await new Promise(r => setTimeout(r, 200)); attempts++; }
   if (!window.docx) throw new Error('La bibliothèque docx.js n\'a pas pu être chargée.');
@@ -303,7 +623,6 @@ async function generatePdf(p, filename) {
     ["Annexe A","Tarifs webmastering (à titre indicatif — prix 2026)"],
   ];
 
-  // Générer le Word d'abord, puis le convertir en PDF
   const doc = new Document({
     styles: {
       default: { document: { run: { font: "Arial", size: 21, color: BLACK } } },
@@ -335,119 +654,7 @@ async function generatePdf(p, filename) {
         pb(),
         new Paragraph({ spacing: { before: 200, after: 320 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: "TABLE DES MATIÈRES", font: "Arial", size: 30, bold: true, color: BLACK })] }),
         ...tocItems.map(([num, title]) => new Paragraph({ spacing: { before: 80, after: 80, line: 300, lineRule: "auto" }, children: [new TextRun({ text: `${num} — ${title}`, font: "Arial", size: 21, color: BLACK })] })),
-      ]
-    }]
-  });
-
-  const blob = await Packer.toBlob(doc);
-  const docxUrl = URL.createObjectURL(blob);
-  
-  // Créer un lien de téléchargement
-  setStatus('success', 'Contrat généré avec succès !');
-  const pdfFilename = filename.replace('.pdf', '.docx');
-  document.getElementById('dlArea').innerHTML = `
-    <a class="dl-link" href="${docxUrl}" download="${pdfFilename}">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Télécharger — ${pdfFilename} (ouvert en PDF avec Word Online)
-    </a>`;
-}
-
-async function generateDocx(p, filename) {
-  // Attendre que docx.js soit disponible (chargement async possible)
-  let attempts = 0;
-  while (!window.docx && attempts < 30) { await new Promise(r => setTimeout(r, 200)); attempts++; }
-  if (!window.docx) throw new Error('La bibliothèque docx.js n\'a pas pu être chargée. Vérifiez votre connexion internet.');
-
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-          AlignmentType, HeadingLevel, BorderStyle, WidthType, ShadingType, PageBreak, Footer } = window.docx;
-
-  const BLACK = "000000", BORDER_GRAY = "CCCCCC", WHITE = "FFFFFF";
-  const PAGE_W = 11906, MARGIN_LR = 1300, CONTENT_W = PAGE_W - MARGIN_LR * 2;
-
-  const sb = { style: BorderStyle.SINGLE, size: 1, color: BORDER_GRAY };
-  const borders = { top: sb, bottom: sb, left: sb, right: sb };
-  const nob = { style: BorderStyle.NONE, size: 0, color: WHITE };
-  const noBorders = { top: nob, bottom: nob, left: nob, right: nob };
-
-  const h1 = t => new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 420, after: 180 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: t, font: "Arial", size: 27, bold: true, color: BLACK })] });
-  const h2 = t => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 140 }, children: [new TextRun({ text: t, font: "Arial", size: 23, bold: true, color: BLACK })] });
-  const body = (t, opts={}) => new Paragraph({ spacing: { before: 100, after: 100, line: 320, lineRule: "auto" }, children: [new TextRun({ text: t, font: "Arial", size: 21, color: BLACK, ...opts })] });
-  const bodyBold = t => body(t, { bold: true });
-  const bullet = t => new Paragraph({ bullet: { level: 0 }, spacing: { before: 80, after: 80, line: 300, lineRule: "auto" }, children: [new TextRun({ text: t, font: "Arial", size: 21, color: BLACK })] });
-  const spacer = (s=140) => new Paragraph({ spacing: { before: s, after: 0 }, children: [new TextRun("")] });
-  const pb = () => new Paragraph({ children: [new PageBreak()] });
-
-  const cellOpts = (w) => ({ borders, width: { size: w, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 100, bottom: 100, left: 140, right: 140 } });
-  const twoCol = (label, value) => new TableRow({ children: [
-    new TableCell({ ...cellOpts(3600), children: [new Paragraph({ children: [new TextRun({ text: label, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
-    new TableCell({ ...cellOpts(CONTENT_W-3600), children: [new Paragraph({ children: [new TextRun({ text: value, font: "Arial", size: 21, color: BLACK })] })] }),
-  ]});
-  const thRow = (cells, widths) => new TableRow({ tableHeader: true, children: cells.map((t,i) => new TableCell({ ...cellOpts(widths[i]), shading: { fill: BLACK, type: ShadingType.CLEAR }, margins: { top: 100, bottom: 100, left: 140, right: 140 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t, font: "Arial", size: 21, bold: true, color: WHITE })] })] })) });
-  const slaRow = (s, d) => new TableRow({ children: [
-    new TableCell({ ...cellOpts(6200), children: [new Paragraph({ children: [new TextRun({ text: s, font: "Arial", size: 21, color: BLACK })] })] }),
-    new TableCell({ ...cellOpts(CONTENT_W-6200), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: d, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
-  ]});
-  const webRow = (h, t, r) => new TableRow({ children: [
-    new TableCell({ ...cellOpts(2600), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
-    new TableCell({ ...cellOpts(2600), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t, font: "Arial", size: 21, color: BLACK })] })] }),
-    new TableCell({ ...cellOpts(CONTENT_W-5200), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r, font: "Arial", size: 21, bold: true, color: BLACK })] })] }),
-  ]});
-
-  const footerInfo = "PASSEDEVANT — SARL au capital de 5 000 € — 1 boulevard Jean Moulin, 44100 Nantes — SIREN 841 367 717 — TVA FR09841367717";
-
-  const tocItems = [
-    ["Article 1","Définitions"],["Article 2","Objet du contrat"],["Article 3","Description du site concerné"],
-    ["Article 4","Périmètre des prestations incluses"],["Article 5","Exclusions explicites"],
-    ["Article 6","Obligations du PRESTATAIRE"],["Article 7","Obligations du CLIENT"],
-    ["Article 8","Gestion des incidents post-mise à jour"],
-    ["Article 9","Technologies et accès"],["Article 10","Conditions financières"],
-    ["Article 11","Propriété intellectuelle"],["Article 12","Confidentialité et sécurité des accès"],
-    ["Article 13","Licéité du contenu du site web"],["Article 14","Déclarations des Parties"],
-    ["Article 15","Échanges, preuves et notifications"],["Article 16","Limitation de responsabilité"],
-    ["Article 17","Durée, reconduction et résiliation"],["Article 18","Indépendance réciproque"],
-    ["Article 19","Collaboration et coopération"],["Article 20","Modification du contrat"],
-    ["Article 21","Divisibilité des clauses"],["Article 22","Droit applicable et langue du contrat"],
-    ["Article 23","Règlement des différends"],["Article 24","Élection de domicile"],
-    ["Annexe A","Tarifs webmastering (à titre indicatif — prix 2026)"],
-  ];
-
-  const doc = new Document({
-    styles: {
-      default: { document: { run: { font: "Arial", size: 21, color: BLACK } } },
-      paragraphStyles: [
-        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 27, bold: true, font: "Arial", color: BLACK }, paragraph: { spacing: { before: 420, after: 180 }, outlineLevel: 0 } },
-        { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 23, bold: true, font: "Arial", color: BLACK }, paragraph: { spacing: { before: 300, after: 140 }, outlineLevel: 1 } },
-      ]
-    },
-    sections: [{
-      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1300, bottom: 1440, left: 1300 } } },
-      footers: { default: new Footer({ children: [
-        new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GRAY, space: 8 } }, spacing: { before: 120, after: 60 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: footerInfo, font: "Arial", size: 16, color: BLACK })] }),
-      ]})},
-      children: [
-        // PAGE DE GARDE
-        new Paragraph({ spacing: { before: 400, after: 300 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PASSEDEVANT", font: "Arial", size: 48, bold: true, color: BLACK })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 100 }, children: [new TextRun({ text: "CONTRAT DE MAINTENANCE ADAPTATIVE", font: "Arial", size: 38, bold: true, color: BLACK })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: "Gestion des mises à jour — Site Internet", font: "Arial", size: 24, color: BLACK, italics: true })] }),
-        spacer(400),
-        new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [3600, CONTENT_W-3600], rows: [
-          twoCol("PRESTATAIRE","PASSEDEVANT"), twoCol("Siège social","1 boulevard Jean Moulin, 44100 Nantes"),
-          twoCol("SIREN","841 367 717"), twoCol("N° TVA intracommunautaire","FR09841367717"),
-          twoCol("CLIENT",p.clientNom), twoCol("Siège social client",p.clientSiege),
-          twoCol("SIRET client",p.clientSiret), twoCol("Signataire",p.clientSignataire),
-          twoCol("Site Internet",p.siteUrl), twoCol("Type de site",p.siteType),
-          twoCol("Date de prise d'effet",p.dateEffet),
-        ]}),
-        spacer(300),
-        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Fait à ${p.lieuSignature}, le ${p.dateSignature}`, font: "Arial", size: 21, color: BLACK })] }),
         pb(),
-
-        // TABLE DES MATIÈRES
-        new Paragraph({ spacing: { before: 200, after: 320 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: "TABLE DES MATIÈRES", font: "Arial", size: 30, bold: true, color: BLACK })] }),
-        ...tocItems.map(([num, title]) => new Paragraph({ spacing: { before: 80, after: 80, line: 300, lineRule: "auto" }, children: [new TextRun({ text: `${num} — ${title}`, font: "Arial", size: 21, color: BLACK })] })),
-        pb(),
-
-        // PRÉAMBULE
         new Paragraph({ spacing: { before: 200, after: 200 }, children: [new TextRun({ text: "ENTRE LES SOUSSIGNÉS", font: "Arial", size: 23, bold: true, color: BLACK })] }),
         body("La société PASSEDEVANT, SARL au capital de 5 000 €, dont le siège social est situé 1 boulevard Jean Moulin, 44100 Nantes, immatriculée au Registre du Commerce et des Sociétés de Nantes sous le numéro 841 367 717, numéro de TVA intracommunautaire FR09841367717 (ci-après « le PRESTATAIRE »),"),
         spacer(100), body("ET"), spacer(100),
@@ -463,7 +670,6 @@ async function generateDocx(p, filename) {
         spacer(100),
         new Paragraph({ spacing: { before: 100, after: 100 }, children: [new TextRun({ text: "IL EST DONC ARRÊTÉ ET CONVENU CE QUI SUIT :", font: "Arial", size: 21, bold: true, color: BLACK })] }),
         spacer(200),
-
         h1("Article 1 — Définitions"),
         body("Au sens du présent contrat, on entend par :"), spacer(100),
         bullet("CMS (Content Management System) : logiciel de gestion de contenu permettant de créer et administrer un site web."),
@@ -478,11 +684,9 @@ async function generateDocx(p, filename) {
         bullet("Maintenance corrective : correction de dysfonctionnements. Non incluse dans le présent contrat."),
         bullet("Maintenance évolutive : création ou modification de fonctionnalités. Non incluse dans le présent contrat."),
         spacer(200),
-
         h1("Article 2 — Objet du contrat"),
         body("Le présent contrat a pour objet exclusif la maintenance adaptative du site Internet du CLIENT. Il ne couvre pas la maintenance corrective, la maintenance évolutive, la refonte du site ni la gestion du nom de domaine ou de l'hébergement."),
         spacer(200),
-
         h1("Article 3 — Description du site concerné"),
         new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [3600, CONTENT_W-3600], rows: [
           twoCol("URL du site",p.siteUrl), twoCol("CMS utilisé",p.siteCms),
@@ -493,7 +697,6 @@ async function generateDocx(p, filename) {
           twoCol("Interlocuteur PRESTATAIRE désigné",p.interlocuteurPresta),
         ]}),
         spacer(200),
-
         h1("Article 4 — Périmètre des prestations incluses"),
         h2("4.1 — Prestations communes à tous les forfaits"),
         bullet("Sauvegarde complète avant toute intervention, stockée sur serveur distant, conservée 30 jours glissants ;"),
@@ -509,7 +712,6 @@ async function generateDocx(p, filename) {
         spacer(80), bodyBold("Site e-commerce"), spacer(60),
         bullet("Vérification du tunnel d'achat complet et des passerelles de paiement après chaque update — jusqu'à 3 heures incluses."),
         spacer(200),
-
         h1("Article 5 — Exclusions explicites"),
         bullet("Correction de bugs préexistants à la signature ;"),
         bullet("Interventions liées à un piratage (sauf faute du PRESTATAIRE) ;"),
@@ -521,7 +723,6 @@ async function generateDocx(p, filename) {
         spacer(120),
         body("Toute heure supplémentaire est facturée au tarif figurant à l'Annexe A, sur devis préalablement accepté."),
         spacer(200),
-
         h1("Article 6 — Obligations du PRESTATAIRE"),
         bullet("Maintenir les compétences nécessaires et désigner un interlocuteur référent ;"),
         bullet("Respecter la confidentialité des accès et données du CLIENT ;"),
@@ -529,7 +730,6 @@ async function generateDocx(p, filename) {
         bullet("Archiver les rapports d'intervention pendant toute la durée du contrat ;"),
         bullet("Informer le CLIENT avant toute mise à jour à risque élevé."),
         spacer(200),
-
         h1("Article 7 — Obligations du CLIENT"),
         bullet("Fournir et maintenir à jour tous les accès nécessaires (CMS, FTP, hébergeur, BDD, DNS) ;"),
         bullet("Ne pas effectuer de mises à jour manuelles sans en informer le PRESTATAIRE par écrit ;"),
@@ -537,17 +737,14 @@ async function generateDocx(p, filename) {
         bullet("Signaler tout dysfonctionnement sans délai via un ticket écrit ;"),
         bullet("Payer les factures à réception."),
         spacer(200),
-
         h1("Article 8 — Gestion des incidents post-mise à jour"),
         body("En cas de régression dans les 48h suivant une intervention, le PRESTATAIRE analyse l'incident, restaure la sauvegarde si nécessaire et applique une correction sans surcoût. Au-delà de 48h, toute anomalie constitue une nouvelle demande et peut être facturée."),
         spacer(200),
-
         h1("Article 9 — Technologies et accès"),
         body("Le PRESTATAIRE intervient à distance dans l'environnement technique du CLIENT (CMS, FTP/SFTP, panel hébergeur, base de données, DNS si nécessaire)."),
         spacer(200),
-
         h1("Article 10 — Conditions financières"),
-        h2("11.1 — Forfait mensuel"),
+        h2("10.1 — Forfait mensuel"),
         new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [5200, 2000, 2106], rows: [
           thRow(["Prestation","Tarif mensuel HT","Tarif annuel HT"],[5200, 2000, 2106]),
           new TableRow({ children: [
@@ -556,83 +753,67 @@ async function generateDocx(p, filename) {
             new TableCell({ ...cellOpts(2106), children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${p.forfaitAnnuel} € HT`, font: "Arial", size: 21, color: BLACK })] })] }),
           ]}),
         ]}),
-        h2("11.2 — Hors forfait"),
+        h2("10.2 — Hors forfait"),
         body("85 € HT / heure (tarif 2026), sur devis accepté préalablement. Voir Annexe A."),
-        h2("11.3 — Révision tarifaire"),
+        h2("10.3 — Révision tarifaire"),
         body("Une fois par an, dans la limite de 15 %. Préavis de 2 mois. Sans contestation dans ce délai, le nouveau tarif est réputé accepté."),
-        h2("11.4 — Paiement"),
+        h2("10.4 — Paiement"),
         body("Facturation mensuelle, paiement à réception de facture par virement bancaire. Pénalités de retard : taux légal × 3. Indemnité forfaitaire de recouvrement : 40 € HT par facture impayée (art. L.441-10 C.com)."),
         spacer(200),
-
-        h1("Article 12 — Propriété intellectuelle"),
+        h1("Article 11 — Propriété intellectuelle"),
         body("Les droits de propriété intellectuelle sur les contenus du CLIENT lui appartiennent. Le PRESTATAIRE cède au CLIENT l'ensemble des droits résultant de ses travaux. Le CLIENT reste seul responsable de ses contenus."),
         spacer(200),
-
-        h1("Article 13 — Confidentialité et sécurité des accès"),
+        h1("Article 12 — Confidentialité et sécurité des accès"),
         body("Les Parties maintiennent la confidentialité des informations échangées. Le PRESTATAIRE restitue et supprime tous les accès dans les 15 jours suivant la fin du contrat."),
         spacer(200),
-
-        h1("Article 14 — Licéité du contenu du site web"),
+        h1("Article 13 — Licéité du contenu du site web"),
         body("Les Parties s'engagent à respecter les législations en vigueur, notamment le RGPD et la loi Informatique et Libertés."),
         spacer(200),
-
-        h1("Article 15 — Déclarations des Parties"),
-        h2("15.1 — Le PRESTATAIRE déclare"),
+        h1("Article 14 — Déclarations des Parties"),
+        h2("14.1 — Le PRESTATAIRE déclare"),
         bullet("Posséder les compétences nécessaires et fournir ses services de façon professionnelle ;"),
         bullet("Ne pas utiliser les informations du CLIENT à d'autres fins que l'exécution du contrat."),
-        h2("15.2 — Le CLIENT déclare"),
+        h2("14.2 — Le CLIENT déclare"),
         bullet("Que son site ne contiendra aucun élément illicite ;"),
         bullet("Qu'il connaît les caractéristiques et limites du réseau Internet."),
         spacer(200),
-
-        h1("Article 16 — Échanges, preuves et notifications"),
+        h1("Article 15 — Échanges, preuves et notifications"),
         body("Les échanges par e-mail ont valeur de preuve. Toute notification formelle est adressée par LRAR ou e-mail à home@passedevant.net pour le PRESTATAIRE."),
         spacer(200),
-
-        h1("Article 17 — Limitation de responsabilité"),
+        h1("Article 16 — Limitation de responsabilité"),
         body("La responsabilité du PRESTATAIRE est plafonnée aux sommes perçues sur les 12 derniers mois. Il n'est pas responsable des dommages liés à une intervention non autorisée du CLIENT ou d'un tiers, ni aux cas de force majeure."),
         spacer(200),
-
-        h1("Article 18 — Durée, reconduction et résiliation"),
-        h2("18.1 — Durée et reconduction"),
+        h1("Article 17 — Durée, reconduction et résiliation"),
+        h2("17.1 — Durée et reconduction"),
         body(`Le contrat prend effet le ${p.dateEffet}, pour une durée d'un an, renouvelable tacitement chaque année.`),
-        h2("18.2 — Résiliation à l'échéance"),
+        h2("17.2 — Résiliation à l'échéance"),
         body("Préavis de 2 mois avant la date anniversaire, notifié par e-mail à home@passedevant.net."),
-        h2("18.3 — Résiliation pour faute"),
+        h2("17.3 — Résiliation pour faute"),
         body("15 jours après mise en demeure restée sans effet."),
-        h2("18.4 — Effets"),
+        h2("17.4 — Effets"),
         body("Restitution des accès dans les 15 jours. Rapport d'état établi. Les sommes dues restent exigibles."),
         spacer(200),
-
-        h1("Article 19 — Indépendance réciproque"),
+        h1("Article 18 — Indépendance réciproque"),
         body("Les Parties sont des professionnels indépendants. Le contrat ne crée ni société, ni mandat, ni subordination."),
         spacer(200),
-
-        h1("Article 20 — Collaboration et coopération"),
+        h1("Article 19 — Collaboration et coopération"),
         body("Les Parties s'engagent à collaborer de bonne foi pour une exécution dans de bonnes conditions."),
         spacer(200),
-
-        h1("Article 21 — Modification du contrat"),
+        h1("Article 20 — Modification du contrat"),
         body("Toute modification requiert un avenant signé. Le présent contrat annule tout engagement antérieur relatif à son objet."),
         spacer(200),
-
-        h1("Article 22 — Divisibilité des clauses"),
+        h1("Article 21 — Divisibilité des clauses"),
         body("La nullité d'une clause n'emporte pas nullité des autres."),
         spacer(200),
-
-        h1("Article 23 — Droit applicable et langue du contrat"),
+        h1("Article 22 — Droit applicable et langue du contrat"),
         body("Droit français. La version française fait foi."),
         spacer(200),
-
-        h1("Article 24 — Règlement des différends"),
+        h1("Article 23 — Règlement des différends"),
         body("Conciliation amiable sous 30 jours, puis médiation, puis Tribunal de Commerce de Nantes."),
         spacer(200),
-
-        h1("Article 25 — Élection de domicile"),
+        h1("Article 24 — Élection de domicile"),
         body("Les Parties élisent domicile en leur siège social. Tout changement doit être notifié sous 8 jours."),
         spacer(300),
-
-        // SIGNATURES
         new Paragraph({ spacing: { before: 240, after: 180 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: BORDER_GRAY, space: 8 } }, children: [new TextRun({ text: "SIGNATURES", font: "Arial", size: 25, bold: true, color: BLACK })] }),
         body(`Fait à ${p.lieuSignature}, le ${p.dateSignature}`),
         body("En deux (2) exemplaires originaux."),
@@ -656,10 +837,7 @@ async function generateDocx(p, filename) {
             ]}),
           ]})
         ]}),
-
         pb(),
-
-        // ANNEXE A
         new Paragraph({ spacing: { before: 200, after: 100 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BLACK, space: 8 } }, children: [new TextRun({ text: "ANNEXE A — Tarifs webmastering", font: "Arial", size: 30, bold: true, color: BLACK })] }),
         new Paragraph({ spacing: { before: 120, after: 220 }, children: [new TextRun({ text: "À titre indicatif — Prix 2026 (hors forfait de maintenance adaptative)", font: "Arial", size: 21, italics: true, color: BLACK })] }),
         bodyBold("Ce que comprennent les forfaits webmastering :"), spacer(80),
@@ -681,7 +859,7 @@ async function generateDocx(p, filename) {
         spacer(160),
         body("Ces prestations font l'objet d'un devis séparé, accepté par écrit avant toute intervention."),
         spacer(80),
-        new Paragraph({ spacing: { before: 80, after: 80 }, children: [new TextRun({ text: "Prix 2026 — susceptibles de révision annuelle dans les conditions prévues à l'Article 11.3.", font: "Arial", size: 18, italics: true, color: BLACK })] }),
+        new Paragraph({ spacing: { before: 80, after: 80 }, children: [new TextRun({ text: "Prix 2026 — susceptibles de révision annuelle dans les conditions prévues à l'Article 10.3.", font: "Arial", size: 18, italics: true, color: BLACK })] }),
       ]
     }]
   });
